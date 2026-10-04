@@ -62,13 +62,16 @@ jobs:
           : "${SSH_PRIVATE_KEY:?Missing SSH_PRIVATE_KEY}"
           : "${SSH_KNOWN_HOSTS:?Missing SSH_KNOWN_HOSTS}"
 
-          DEPLOY_PATH="${DEPLOY_PATH:-/var/www/moblog}"
+          DEPLOY_PATH="${DEPLOY_PATH:-/opt/1panel/www/sites/blog.hoyo.ltd/index}"
 
           [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
           [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
           (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 ))
           [[ "$SSH_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
-          [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9/_-]+$ ]]
+          if [[ ! "$DEPLOY_PATH" =~ ^(/[a-zA-Z0-9_-][a-zA-Z0-9._-]*)+$ ]]; then
+            printf '%s\n' 'Invalid DEPLOY_PATH: use an absolute path without spaces or dot segments.' >&2
+            exit 1
+          fi
           [[ "$RELEASE_ID" =~ ^[a-zA-Z0-9-]+$ ]]
 
           test -s dist/index.html
