@@ -25,28 +25,37 @@ export function GithubCardComponent(properties, children) {
 	const repo = properties.repo;
 	const cardUuid = `GC${Math.random().toString(36).slice(-6)}`; // Collisions are not important
 
-	// Fields given as attributes (manually or injected by remarkGithubCard at
-	// build time) override API values. Fully static when data was prefetched
-	// at build or every field is provided — skips the client-side request.
 	const staticFields = {};
 	for (const key of ["description", "language", "stars", "forks", "license"]) {
 		if (properties[key] !== undefined) staticFields[key] = properties[key];
 	}
 	const isStatic =
+		properties.dataPrefetched === "true" ||
 		properties["data-prefetched"] === "true" ||
 		["description", "language", "stars", "forks", "license"].every(
 			(k) => staticFields[k] !== undefined,
 		);
+	const fmt = Intl.NumberFormat("en-us", {
+		notation: "compact",
+		maximumFractionDigits: 1,
+	});
+	const formatCount = (value) =>
+		value !== undefined &&
+		value !== null &&
+		value !== "" &&
+		Number.isFinite(Number(value))
+			? fmt.format(Number(value)).replaceAll("\u202f", "")
+			: "—";
+	const serialize = (value) => JSON.stringify(value).replaceAll("<", "\\u003c");
 
 	const nAvatar = h(`div#${cardUuid}-avatar`, {
 		class: "gc-avatar",
-		// The avatars endpoint is not rate limited, safe to set immediately
 		style: `background-image: url(https://github.com/${repo.split("/")[0]}.png); background-color: transparent`,
 	});
 	const nLanguage = h(
 		`span#${cardUuid}-language`,
 		{ class: "gc-language" },
-		isStatic ? staticFields.language : "Waiting...",
+		staticFields.language || "",
 	);
 
 	const nTitle = h("div", { class: "gc-titlebar" }, [
@@ -65,69 +74,87 @@ export function GithubCardComponent(properties, children) {
 		`div#${cardUuid}-description`,
 		{ class: "gc-description" },
 		isStatic
-			? staticFields.description || "Description not set"
-			: "Waiting for api.github.com...",
+			? staticFields.description?.replace(/:[a-zA-Z0-9_]+:/g, "") ||
+					"Description not set"
+			: staticFields.description || "Loading repository data...",
 	);
 
 	const nStars = h(
 		`div#${cardUuid}-stars`,
 		{ class: "gc-stars" },
-		isStatic ? staticFields.stars || "0" : "00K",
+		formatCount(staticFields.stars),
 	);
 	const nForks = h(
 		`div#${cardUuid}-forks`,
 		{ class: "gc-forks" },
-		isStatic ? staticFields.forks || "0" : "0K",
+		formatCount(staticFields.forks),
 	);
 	const nLicense = h(
 		`div#${cardUuid}-license`,
 		{ class: "gc-license" },
-		staticFields.license ?? "0K",
+		staticFields.license || (isStatic ? "no-license" : "—"),
 	);
 
-	const nScript = h(
-		`script#${cardUuid}-script`,
-		{ type: "text/javascript", defer: true },
-		`
-      // ungh.cc is an unauthenticated GitHub API mirror without rate limits;
-      // fall back to api.github.com when ungh fails. Field overrides provided
-      // via directive attributes take precedence over fetched values.
-      const overrides = ${JSON.stringify(staticFields)};
-      const apply = (data) => {
+	const nScript = isStatic
+		? undefined
+		: h(
+				`script#${cardUuid}-script`,
+				{ type: "text/javascript" },
+				`
+      (() => {
+        const card = document.getElementById('${cardUuid}-card');
+        if (!card) return;
+        const overrides = ${serialize(staticFields)};
+        const repo = ${serialize(repo)};
         const fmt = Intl.NumberFormat('en-us', { notation: "compact", maximumFractionDigits: 1 });
-        const v = { ...data, ...overrides };
-        const license = typeof v.license === 'string' ? v.license : v.license?.spdx_id;
-        document.getElementById('${cardUuid}-description').innerText = v.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || "Description not set";
-        document.getElementById('${cardUuid}-language').innerText = v.language || '';
-        document.getElementById('${cardUuid}-forks').innerText = fmt.format(v.forks ?? 0).replaceAll("\\u202f", '');
-        document.getElementById('${cardUuid}-stars').innerText = fmt.format(v.stars ?? v.stargazers_count ?? 0).replaceAll("\\u202f", '');
-        document.getElementById('${cardUuid}-license').innerText = license || "no-license";
-        document.getElementById('${cardUuid}-card').classList.remove("fetch-waiting");
-        console.log("[GITHUB-CARD] Loaded card for ${repo} | ${cardUuid}.")
-      };
-      const fail = (err) => {
-        const c = document.getElementById('${cardUuid}-card');
-        c?.classList.add("fetch-error");
-        console.warn("[GITHUB-CARD] (Error) Loading card for ${repo} | ${cardUuid}: " + err)
-      };
-      fetch('https://ungh.cc/repos/${repo}', { referrerPolicy: "no-referrer" })
-        .then(r => r.ok ? r.json() : Promise.reject(new Error('ungh ' + r.status)))
-        .then(j => j.repo ? j.repo : Promise.reject(new Error('ungh bad response')))
-        .then(repo => {
-          // ungh lacks language/license; best-effort enrich via official API.
-          fetch('https://api.github.com/repos/${repo}', { referrerPolicy: "no-referrer" })
-            .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
-            .then(d => apply({ ...d, ...repo, language: d.language, license: d.license }))
-            .catch(() => apply(repo));
-        })
-        .catch(() =>
-          fetch('https://api.github.com/repos/${repo}', { referrerPolicy: "no-referrer" })
-            .then(r => r.ok ? r.json() : Promise.reject(new Error('GitHub API ' + r.status)))
-            .then(apply)
-            .catch(fail)
-        )
+        const formatCount = (value) =>
+          value !== undefined && value !== null && value !== '' && Number.isFinite(Number(value))
+            ? fmt.format(Number(value)).replaceAll("\\u202f", '')
+            : '—';
+        const setText = (name, value) => {
+          const element = card.querySelector('.gc-' + name);
+          if (element) element.textContent = value;
+        };
+        const apply = (data) => {
+          if (!card.isConnected) return;
+          const v = { ...data, ...overrides };
+          const license = typeof v.license === 'string' ? v.license : v.license?.spdx_id;
+          setText('description', v.description?.replace(/:[a-zA-Z0-9_]+:/g, '') || "Description not set");
+          setText('language', v.language || '');
+          setText('forks', formatCount(v.forks));
+          setText('stars', formatCount(v.stars));
+          setText('license', license || "no-license");
+          card.classList.remove("fetch-waiting", "fetch-error");
+        };
+        const request = async (url, mirror = false) => {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
+          try {
+            const response = await fetch(url, { referrerPolicy: "no-referrer", signal: controller.signal });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const json = await response.json();
+            const data = mirror ? json?.repo : json;
+            const stars = mirror ? data?.stars : data?.stargazers_count;
+            if (!data || !Number.isFinite(stars) || stars < 0 || !Number.isFinite(data.forks) || data.forks < 0) {
+              throw new Error('Invalid repository response');
+            }
+            return { ...data, stars };
+          } finally {
+            clearTimeout(timeout);
+          }
+        };
+        request('https://api.github.com/repos/' + repo)
+          .catch(() => request('https://ungh.cc/repos/' + repo, true))
+          .then(apply)
+          .catch((err) => {
+            if (!card.isConnected) return;
+            apply({ description: "Repository data unavailable", license: '—' });
+            card.classList.add("fetch-error");
+            console.warn('[GITHUB-CARD] Failed to load ' + repo + ': ' + err.message);
+          });
+      })();
     `,
-	);
+			);
 
 	return h(
 		`a#${cardUuid}-card`,
