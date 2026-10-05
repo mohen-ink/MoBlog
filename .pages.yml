@@ -1,0 +1,52 @@
+media:
+  input: src/assets/images
+  output: /src/assets/images
+
+content:
+  - name: posts
+    label: 文章
+    type: collection
+    path: src/content/posts
+    filename: "{primary}.md"
+    subfolders: false
+    view:
+      primary: title
+      sort: published
+      order: desc
+    fields:
+      - name: title
+        label: 标题
+        type: string
+        required: true
+      - name: published
+        label: 发布时间
+        type: date
+        options:
+          format: yyyy-MM-dd
+      - name: updated
+        label: 更新时间
+        type: date
+        options:
+          format: yyyy-MM-dd
+      - name: draft
+        label: 草稿
+        type: boolean
+      - name: description
+        label: 描述
+        type: text
+      - name: image
+        label: 封面图
+        type: image
+      - name: tags
+        label: 标签
+        type: string
+        list: true
+      - name: category
+        label: 分类
+        type: string
+      - name: lang
+        label: 语言
+        type: string
+      - name: body
+        label: 正文
+        type: rich-text
