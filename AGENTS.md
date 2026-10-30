@@ -152,7 +152,7 @@ $$
 ## 5. 写作完成后的验证
 
 1. 检查 Frontmatter、日期、发布状态、标题层级、图片路径、代码块闭合及来源链接。
-2. 在项目根目录运行 `pnpm check` 和 `pnpm build`；构建包含 Pagefind 搜索索引。没有配置单独的测试命令，不为写作额外添加测试框架。
+2. 在项目根目录运行 `pnpm exec biome ci ./src`、`pnpm check` 和 `pnpm build`；构建包含 Pagefind 搜索索引。Biome 本地依赖、配置 schema 与 `.github/workflows/biome.yml` 固定使用 2.6.4，升级时三处同步，不使用 `latest`。Biome 会检查文章 Markdown；用 `pnpm format` 修正格式后查看差异，确认没有改变文章和示例代码的含义。`src/` 使用 LF 换行，由 `.gitattributes` 固定，避免 Windows 与 CI 检查不一致。没有配置单独的测试命令，不为写作额外添加测试框架。
 3. 使用 `pnpm dev`（默认 `http://localhost:4321`）打开目标文章。草稿必须用开发模式预览，不能只检查生产 `dist/`。已发布文章还可用 `pnpm preview` 查看构建结果。
 4. 检查桌面 / 移动布局、目录跳转、代码复制与折叠、图片放大，以及文章实际使用的提示框、公式、仓库卡片和嵌入内容。
 5. 移除临时验证文章或资源，确认差异只包含本次需要的内容。检查失败时说明具体错误与是否为已有问题；未完成的验证如实报告，不宣称已通过。

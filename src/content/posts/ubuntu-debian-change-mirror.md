@@ -1,4 +1,5 @@
 ---
+
 title: Ubuntu 与 Debian 各版本换源指南
 published: 2026-10-05
 description: 'Ubuntu 24.04/22.04/20.04 与 Debian 13/12/11 各流行版本的 apt 换源方法，含 deb822 新格式与传统 sources.list 的写法，以及常见坑。'
@@ -13,9 +14,9 @@ lang: ''
 
 ## 一、先分清两种源格式
 
-| 格式 | 文件位置 | 默认使用版本 |
-|---|---|---|
-| 传统一行式 | `/etc/apt/sources.list` | Ubuntu ≤ 22.04，Debian ≤ 12 |
+| 格式        | 文件位置                            | 默认使用版本                |
+| ----------- | ----------------------------------- | --------------------------- |
+| 传统一行式  | `/etc/apt/sources.list`             | Ubuntu ≤ 22.04，Debian ≤ 12 |
 | deb822 新式 | `/etc/apt/sources.list.d/*.sources` | Ubuntu ≥ 24.04，Debian ≥ 13 |
 
 动手之前先备份原文件，翻车了还能救：
@@ -148,14 +149,14 @@ sudo apt upgrade   # 可选
 
 ## 五、常用国内镜像站
 
-| 镜像 | 地址 |
-|---|---|
-| 清华 TUNA | `mirrors.tuna.tsinghua.edu.cn` |
-| 中科大 USTC | `mirrors.ustc.edu.cn` |
-| 阿里云 | `mirrors.aliyun.com` |
-| 腾讯云 | `mirrors.cloud.tencent.com` |
-| 华为云 | `mirrors.huaweicloud.com` |
-| 网易 | `mirrors.163.com` |
+| 镜像        | 地址                           |
+| ----------- | ------------------------------ |
+| 清华 TUNA   | `mirrors.tuna.tsinghua.edu.cn` |
+| 中科大 USTC | `mirrors.ustc.edu.cn`          |
+| 阿里云      | `mirrors.aliyun.com`           |
+| 腾讯云      | `mirrors.cloud.tencent.com`    |
+| 华为云      | `mirrors.huaweicloud.com`      |
+| 网易        | `mirrors.163.com`              |
 
 云服务器可以优先用各家的内网镜像（如 `mirrors.cloud.aliyuncs.com`），免流量且速度快，但仅限自家 ECS 内网访问。
 
