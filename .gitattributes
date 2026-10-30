@@ -1,5 +1,5 @@
 * text=auto
-/src/** text eol=lf
+/src/** text=auto eol=lf
 /.github/workflows/*.yml text eol=lf
 /biome.json text eol=lf
 /package.json text eol=lf
